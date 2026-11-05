@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WindChecker — Windows forensic triage</title>
+<meta name="description" content="WindChecker is a single-file Windows forensic workbench with 39 modules: processes, services, event logs, USN journal, MFT, USB history, SRUM, notifications, file hashing and image metadata.">
+<style>
+  :root {
+    --bg: #000000;
+    --surface: #0a0b0c;
+    --surface-2: #101113;
+    --ink: #f4f5f7;
+    --body: #a3a9b3;
+    --muted: #6d737d;
+    --line: #1e1f23;
+    --line-strong: #2c2e34;
+    --accent: #3b82f6;
+    --accent-hover: #2f74e6;
+    --max: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; color-scheme: dark; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: rgba(59,130,246,.35); }
+
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; height: auto; }
+
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+  /* header */
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(0,0,0,.78);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .top .wrap { display: flex; align-items: center; gap: 22px; height: 64px; max-width: none; padding: 0 32px; }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 16.5px;
+    font-weight: 650;
+    letter-spacing: -.015em;
+  }
+
+  .brand svg { width: 20px; height: 20px; color: var(--accent); }
+
+  nav { display: flex; gap: 26px; margin-left: auto; font-size: 14px; color: var(--body); }
+  nav a:hover { color: var(--ink); }
+
+  .dl {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 36px;
+    padding: 0 15px;
+    border-radius: 9px;
+    background: #fff;
+    color: #000;
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: background .15s ease;
+  }
+
+  .dl:hover { background: #dcdcdc; }
+  .dl svg { width: 14px; height: 14px; }
+
+  .social { display: flex; align-items: center; gap: 6px; }
+
+  .social a {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--body);
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+  }
+
+  .social a:hover { color: var(--ink); border-color: var(--line-strong); background: #121317; }
+  .social svg { width: 16px; height: 16px; }
+
+  /* hero */
+  .hero { padding: 88px 0 64px; }
+
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  h1 {
+    font-size: 48px;
+    line-height: 1.08;
+    letter-spacing: -.032em;
+    font-weight: 640;
+    margin: 16px 0 0;
+    max-width: 24ch;
+  }
+
+  .hero p {
+    font-size: 17.5px;
+    line-height: 1.6;
+    color: var(--body);
+    margin: 20px 0 0;
+    max-width: 64ch;
+  }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 20px;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 550;
+    transition: background .15s ease, border-color .15s ease;
+  }
+
+  .btn svg { width: 16px; height: 16px; }
+  .btn:hover { background: #141519; border-color: #3a3d44; }
+
+  .btn-main {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.6);
+  }
+
+  .btn-main:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 26px;
+    font-size: 13px;
+    color: var(--body);
+  }
+
+  .meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+
+  .meta svg { width: 13px; height: 13px; color: var(--muted); }
+
+  .shot {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .hero-shot {
+    margin-top: 52px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.03), 0 50px 110px -80px rgba(59,130,246,.5);
+  }
+
+  /* sections */
+  section { padding: 80px 0; border-top: 1px solid var(--line); }
+
+  h2 {
+    font-size: 30px;
+    line-height: 1.2;
+    letter-spacing: -.022em;
+    font-weight: 640;
+    margin: 0;
+  }
+
+  .sub { color: var(--body); margin: 12px 0 0; font-size: 15.5px; max-width: 72ch; }
+
+  /* modules */
+  .group { margin-top: 44px; }
+
+  .group h3 {
+    margin: 0 0 14px;
+    font-size: 11.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-weight: 650;
+    color: var(--muted);
+  }
+
+  .mods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+  .mod {
+    display: flex;
+    gap: 11px;
+    padding: 15px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+  }
+
+  .mod:hover { border-color: var(--line-strong); background: #0e0f12; transform: translateY(-1px); }
+
+  .mod svg { width: 17px; height: 17px; flex: 0 0 17px; margin-top: 3px; color: var(--accent); }
+  .mod b { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.005em; }
+  .mod span { display: block; font-size: 13.5px; color: var(--body); line-height: 1.55; margin-top: 3px; }
+
+  /* screenshots */
+  .strip-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+
+  .arrows { display: flex; gap: 8px; }
+
+  .arrows button {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+
+  .arrows button:hover { background: #16171b; border-color: var(--line-strong); }
+
+  .strip {
+    display: flex;
+    gap: 16px;
+    margin-top: 28px;
+    padding-bottom: 18px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    cursor: grab;
+    scrollbar-width: none;
+  }
+
+  .strip.dragging { cursor: grabbing; scroll-snap-type: none; }
+  .strip.dragging a { pointer-events: none; }
+  .strip::-webkit-scrollbar { display: none; }
+
+  .slide { flex: 0 0 min(720px, 88vw); margin: 0; scroll-snap-align: start; }
+
+  .slide .shot { border-radius: 12px; }
+  .slide img { cursor: zoom-in; }
+
+  figcaption { margin-top: 12px; font-size: 13.5px; color: var(--body); }
+  figcaption b { display: block; font-size: 14.5px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+
+  /* requirements */
+  .req { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; margin-top: 32px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  th, td { text-align: left; padding: 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { width: 34%; font-weight: 500; color: var(--muted); }
+
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px 22px;
+    font-size: 13.5px;
+    color: var(--body);
+    align-self: start;
+  }
+
+  .note b { display: block; color: var(--ink); font-size: 14.5px; margin-bottom: 6px; font-weight: 600; }
+
+  /* download */
+  .box {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 40px 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 36px;
+  }
+
+  .box h2 { font-size: 26px; }
+  .box p { margin: 8px 0 0; font-size: 14.5px; color: var(--body); }
+
+  .dl-row { display: flex; flex-wrap: wrap; gap: 10px; flex: 0 0 auto; }
+
+  .follow { margin: 20px 0 0; font-size: 13.5px; color: var(--muted); }
+  .follow a { color: var(--body); border-bottom: 1px solid var(--line-strong); padding-bottom: 1px; }
+  .follow a:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* footer */
+  footer { border-top: 1px solid var(--line); padding: 28px 0 56px; font-size: 13.5px; color: var(--muted); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  footer nav { gap: 22px; }
+  footer a:hover { color: var(--ink); }
+
+  @media (max-width: 900px) {
+    h1 { font-size: 36px; max-width: 26ch; }
+    .hero { padding: 60px 0 48px; }
+    section { padding: 60px 0; }
+    .mods { grid-template-columns: repeat(2, 1fr); }
+    .req { grid-template-columns: 1fr; gap: 32px; }
+    .box { flex-direction: column; align-items: flex-start; padding: 30px; }
+    nav { display: none; }
+    .slide { flex-basis: 88vw; }
+    .hero-shot { margin-top: 36px; }
+  }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 30px; letter-spacing: -.025em; }
+    .hero p { font-size: 16px; }
+    .mods { grid-template-columns: 1fr; }
+    .top .wrap { height: auto; padding: 12px 20px; flex-wrap: wrap; gap: 12px; }
+    .dl { margin-left: auto; }
+    .strip-head { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .social a { width: 30px; height: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l7 3v5.5c0 4.3-2.9 7.9-7 9.5-4.1-1.6-7-5.2-7-9.5V6l7-3z"/>
+  </symbol>
+  <symbol id="i-disk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="6" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/><path d="M7 9h.01M7 17h.01"/>
+  </symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="5" y="5" width="14" height="14" rx="1"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/>
+  </symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>
+  </symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 6h16M4 12h16M4 18h10"/>
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/>
+  </symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 7h6l2 2h10v10H3z"/>
+  </symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5M3 16l9 5 9-5"/>
+  </symbol>
+  <symbol id="i-term" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="18" height="16" rx="1"/><path d="M7 9l2 3-2 3M12 15h5"/>
+  </symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="5" y="10" width="14" height="10" rx="1"/><path d="M8 10V7a4 4 0 018 0v3"/>
+  </symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="5" width="18" height="14" rx="1"/><circle cx="9" cy="10" r="2"/><path d="M5 17l4-3 3 2 3-3 4 4"/>
+  </symbol>
+  <symbol id="i-net" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="18" r="2.2"/><path d="M7.6 7.6l8.8 8.8"/>
+  </symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0"/><path d="M16 9h5M16 13h5"/>
+  </symbol>
+  <symbol id="i-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>
+  </symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 9a6 6 0 1112 0c0 4 2 5 2 5H4s2-1 2-5z"/><path d="M10 20a2 2 0 004 0"/>
+  </symbol>
+  <symbol id="i-usb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 3v4M15 3v4"/><rect x="6" y="7" width="12" height="5" rx="1"/><path d="M12 12v4"/><rect x="8" y="16" width="8" height="5" rx="1"/>
+  </symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>
+  </symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/>
+  </symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 12.5l4 4L19 7"/>
+  </symbol>
+  <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/>
+  </symbol>
+  <symbol id="i-telegram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 4L3 11l6 2 2 6 3-4 4 3 3-14z"/><path d="M9 13l12-9"/>
+  </symbol>
+  <symbol id="i-youtube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+    <rect x="2.5" y="6" width="19" height="12" rx="3.5"/><path d="M10.5 9.6l4.8 2.4-4.8 2.4z" fill="currentColor" stroke="none"/>
+  </symbol>
+</svg>
+
+<div class="top">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <svg><use href="#i-shield"/></svg>
+      WindChecker
+    </a>
+    <nav>
+      <a href="#modules">Modules</a>
+      <a href="#screens">Screenshots</a>
+      <a href="#requirements">Requirements</a>
+    </nav>
+    <a class="dl" href="#download">
+      <svg><use href="#i-download"/></svg>
+      Download
+    </a>
+    <div class="social">
+      <a href="https://t.me/harmonyxbt" target="_blank" rel="noopener" aria-label="Telegram">
+        <svg><use href="#i-telegram"/></svg>
+      </a>
+      <a href="https://www.youtube.com/@yhujinism" target="_blank" rel="noopener" aria-label="YouTube">
+        <svg><use href="#i-youtube"/></svg>
+      </a>
+    </div>
+  </div>
+</div>
+
+<main id="top">
+
+  <div class="hero">
+    <div class="wrap">
+      <span class="eyebrow">Windows forensic triage</span>
+      <h1>See what really happened on a Windows machine.</h1>
+      <p>
+        WindChecker is a single-file workbench for Windows forensics. Thirty-nine modules read live
+        system state and on-disk artifacts — processes, services, event logs, USN journal, MFT, USB
+        history, SRUM, notifications, file hashes and image metadata — and show every record with the
+        raw detail behind it.
+      </p>
+      <div class="actions">
+        <a class="btn btn-main" href="WindChecker.exe" download>
+          <svg><use href="#i-download"/></svg>
+          Download toolkit
+        </a>
+        <a class="btn" href="src.zip" download>
+          <svg><use href="#i-code"/></svg>
+          Source code
+        </a>
+      </div>
+      <div class="meta">
+        <span><svg><use href="#i-file"/></svg>Windows 10 / 11 · x64</span>
+        <span><svg><use href="#i-check"/></svg>No installer</span>
+        <span><svg><use href="#i-check"/></svg>No kernel driver</span>
+        <span><svg><use href="#i-check"/></svg>Read-only access</span>
+      </div>
+
+      <div class="shot hero-shot">
+        <a href="assets/eventviewer.png" target="_blank" rel="noopener">
+          <img src="assets/eventviewer.png" alt="WindChecker Event Viewer with channel tree, event list and detail pane" width="1364" height="779">
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <section id="modules">
+    <div class="wrap">
+      <h2>Modules</h2>
+      <p class="sub">Grouped the way an investigation moves: the host, the file system, the network, then execution and persistence artifacts. Every module shares the same table, filter bar and detail pane.</p>
+
+      <div class="group">
+        <h3>System</h3>
+        <div class="mods">
+          <div class="mod"><svg><use href="#i-cpu"/></svg><div><b>Computer Info</b><span>Hostname, OS build, install date, timezone, uptime, users, hardware.</span></div></div>
+          <div class="mod"><svg><use href="#i-disk"/></svg><div><b>Volumes</b><span>Fixed, removable and network volumes with file system, capacity and serial.</span></div></div>
+          <div class="mod"><svg><use href="#i-cpu"/></svg><div><b>Processes</b><span>Live process tree with integrity level, hosted services, DLLs and drivers.</span></div></div>
+          <div class="mod"><svg><use href="#i-gear"/></svg><div><b>Services</b><span>Services and drivers with start type, state, binary path and account.</span></div></div>
+          <div class="mod"><svg><use href="#i-list"/></svg><div><b>Event Logs</b><span>Records with level, provider, event ID, timestamp and message text.</span></div></div>
+          <div class="mod"><svg><use href="#i-list"/></svg><div><b>Event Viewer</b><span>Full channel tree, XPath filters, presets and SID-to-account resolution.</span></div></div>
+          <div class="mod"><svg><use href="#i-clock"/></svg><div><b>Prefetch &amp; Recent</b><span>Execution traces from Prefetch plus per-user recent item lists.</span></div></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>File system</h3>
+        <div class="mods">
+          <div class="mod"><svg><use href="#i-search"/></svg><div><b>File Search</b><span>Search by name, pattern, size and date, with regex and case control.</span></div></div>
+          <div class="mod"><svg><use href="#i-folder"/></svg><div><b>Hidden Files</b><span>Hidden and system-flagged files and folders Explorer does not show.</span></div></div>
+          <div class="mod"><svg><use href="#i-list"/></svg><div><b>USN Journal</b><span>Change journal records: create, delete, rename and data change events.</span></div></div>
+          <div class="mod"><svg><use href="#i-layers"/></svg><div><b>MFT</b><span>Master File Table records with flags, parents and the four timestamps.</span></div></div>
+          <div class="mod"><svg><use href="#i-term"/></svg><div><b>Disk Strings</b><span>ASCII and Unicode strings from raw volumes, with length and offset filters.</span></div></div>
+          <div class="mod"><svg><use href="#i-disk"/></svg><div><b>Carving</b><span>Signature-based recovery of deleted files, saved back to disk.</span></div></div>
+          <div class="mod"><svg><use href="#i-lock"/></svg><div><b>Hash &amp; Signature</b><span>MD5, SHA-1 and SHA-256 plus Authenticode signer and catalog checks.</span></div></div>
+          <div class="mod"><svg><use href="#i-image"/></svg><div><b>Image Metadata</b><span>Full EXIF, XMP and IPTC dump: camera, lens, exposure, GPS.</span></div></div>
+          <div class="mod"><svg><use href="#i-file"/></svg><div><b>RecentDocs</b><span>Per-user recent document lists with original path and last access.</span></div></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Network</h3>
+        <div class="mods">
+          <div class="mod"><svg><use href="#i-net"/></svg><div><b>Connections</b><span>TCP and UDP endpoints with owning process, state and remote address.</span></div></div>
+          <div class="mod"><svg><use href="#i-net"/></svg><div><b>Packet Capture</b><span>Live traffic summary per flow, without a filter driver.</span></div></div>
+          <div class="mod"><svg><use href="#i-net"/></svg><div><b>Network Artifacts</b><span>Saved Wi-Fi profiles, interface inventory and connection history.</span></div></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Security</h3>
+        <div class="mods">
+          <div class="mod"><svg><use href="#i-term"/></svg><div><b>PowerShell History</b><span>PSReadLine console history for every user profile.</span></div></div>
+          <div class="mod"><svg><use href="#i-shield"/></svg><div><b>Startup Apps</b><span>Run keys, startup folders and scheduled autostarts.</span></div></div>
+          <div class="mod"><svg><use href="#i-shield"/></svg><div><b>Persistence</b><span>Run, services, tasks, image hijacks and Winlogon entries.</span></div></div>
+          <div class="mod"><svg><use href="#i-user"/></svg><div><b>Execution Evidence</b><span>Execution traces joined across the artifacts that record a run.</span></div></div>
+          <div class="mod"><svg><use href="#i-db"/></svg><div><b>SRUM</b><span>Per-application network, energy and resource usage.</span></div></div>
+          <div class="mod"><svg><use href="#i-list"/></svg><div><b>AmCache</b><span>Program inventory with install timestamps and publisher data.</span></div></div>
+          <div class="mod"><svg><use href="#i-lock"/></svg><div><b>Code Signing</b><span>Signature status for installed binaries: valid, expired, unsigned.</span></div></div>
+          <div class="mod"><svg><use href="#i-usb"/></svg><div><b>USB Device History</b><span>Vendor, product, VID/PID, serial, revision and connect history.</span></div></div>
+          <div class="mod"><svg><use href="#i-clock"/></svg><div><b>BAM / DAM</b><span>Last execution time for each binary per user.</span></div></div>
+          <div class="mod"><svg><use href="#i-user"/></svg><div><b>UserAssist</b><span>GUI program launches with run count and last-used time.</span></div></div>
+          <div class="mod"><svg><use href="#i-list"/></svg><div><b>MRU</b><span>Most-recently-used lists per application.</span></div></div>
+          <div class="mod"><svg><use href="#i-net"/></svg><div><b>WMI Event Subscriptions</b><span>Permanent filters, consumers and bindings.</span></div></div>
+          <div class="mod"><svg><use href="#i-shield"/></svg><div><b>Defender Logs</b><span>Detection history, quarantine events and protection state.</span></div></div>
+          <div class="mod"><svg><use href="#i-net"/></svg><div><b>Remote Access (RDP)</b><span>Inbound and outbound Remote Desktop history.</span></div></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Artifacts</h3>
+        <div class="mods">
+          <div class="mod"><svg><use href="#i-clock"/></svg><div><b>Activities Cache</b><span>Windows Timeline activity database.</span></div></div>
+          <div class="mod"><svg><use href="#i-file"/></svg><div><b>Crash Dumps</b><span>Dump files with process, faulting module and timestamp.</span></div></div>
+          <div class="mod"><svg><use href="#i-bell"/></svg><div><b>Notifications</b><span>Notification database: app, title, body, time and expiry.</span></div></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Viewers</h3>
+        <div class="mods">
+          <div class="mod"><svg><use href="#i-db"/></svg><div><b>Registry</b><span>Browse keys with value names, types and decoded data.</span></div></div>
+          <div class="mod"><svg><use href="#i-file"/></svg><div><b>Clipboard</b><span>Current clipboard contents with format inventory.</span></div></div>
+          <div class="mod"><svg><use href="#i-image"/></svg><div><b>Thumbcache</b><span>Thumbnails recovered from the cache databases.</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screens">
+    <div class="wrap">
+      <div class="strip-head">
+        <div>
+          <h2>Screenshots</h2>
+          <p class="sub">Every screen answers the same question: where did this come from? Drag the strip or use the arrows.</p>
+        </div>
+        <div class="arrows">
+          <button type="button" data-scroll="-1" aria-label="Previous screenshot">&#8249;</button>
+          <button type="button" data-scroll="1" aria-label="Next screenshot">&#8250;</button>
+        </div>
+      </div>
+
+      <div class="strip" id="shots">
+        <figure class="slide">
+          <div class="shot"><a href="assets/eventviewer.png" target="_blank" rel="noopener"><img src="assets/eventviewer.png" alt="Event Viewer with channel tree and event detail" width="1364" height="779" loading="lazy"></a></div>
+          <figcaption><b>Event Viewer</b>The complete channel tree, XPath filters and presets. SIDs are resolved to accounts and the detail pane renders parsed event data.</figcaption>
+        </figure>
+        <figure class="slide">
+          <div class="shot"><a href="assets/hash.png" target="_blank" rel="noopener"><img src="assets/hash.png" alt="Hash and signature results per file" width="1364" height="779" loading="lazy"></a></div>
+          <figcaption><b>Hash &amp; Signature</b>Three digests per file plus Authenticode status and signer. Non-PE files are reported as such.</figcaption>
+        </figure>
+        <figure class="slide">
+          <div class="shot"><a href="assets/volumes.png" target="_blank" rel="noopener"><img src="assets/volumes.png" alt="Volume inventory" width="1364" height="779" loading="lazy"></a></div>
+          <figcaption><b>Volumes</b>Fixed, removable and network volumes with file system, capacity, label and serial number.</figcaption>
+        </figure>
+        <figure class="slide">
+          <div class="shot"><a href="assets/usb.png" target="_blank" rel="noopener"><img src="assets/usb.png" alt="USB device history table" width="1364" height="779" loading="lazy"></a></div>
+          <figcaption><b>USB Device History</b>Vendor and product names resolved from VID/PID, serial, revision, drive letter and connection times.</figcaption>
+        </figure>
+        <figure class="slide">
+          <div class="shot"><a href="assets/eventlogs.png" target="_blank" rel="noopener"><img src="assets/eventlogs.png" alt="Event log records" width="1364" height="779" loading="lazy"></a></div>
+          <figcaption><b>Event Logs</b>Records with level, provider, event ID and timestamp, filterable by field or date range.</figcaption>
+        </figure>
+        <figure class="slide">
+          <div class="shot"><a href="assets/services.png" target="_blank" rel="noopener"><img src="assets/services.png" alt="Service inventory" width="1364" height="779" loading="lazy"></a></div>
+          <figcaption><b>Services</b>Services and drivers with start type, state, binary path and account.</figcaption>
+        </figure>
+        <figure class="slide">
+          <div class="shot"><a href="assets/prefetch.png" target="_blank" rel="noopener"><img src="assets/prefetch.png" alt="Prefetch execution records" width="1364" height="779" loading="lazy"></a></div>
+          <figcaption><b>Prefetch &amp; Recent</b>Run count, last run time and the files each program touched on launch.</figcaption>
+        </figure>
+        <figure class="slide">
+          <div class="shot"><a href="assets/exif.png" target="_blank" rel="noopener"><img src="assets/exif.png" alt="Image metadata results" width="1364" height="779" loading="lazy"></a></div>
+          <figcaption><b>Image Metadata</b>Camera, lens, exposure and GPS per image, with the full metadata tree underneath.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="requirements">
+    <div class="wrap">
+      <h2>Requirements and scope</h2>
+      <p class="sub">WindChecker reads a machine that is already running. It does not replace a write-blocked acquisition or a full disk imager.</p>
+
+      <div class="req">
+        <div>
+          <table>
+            <tr><th>Operating system</th><td>Windows 10 or Windows 11, 64-bit</td></tr>
+            <tr><th>Privileges</th><td>Administrator for most artifacts; some modules show only what the current user can read</td></tr>
+            <tr><th>Footprint</th><td>One executable, no installer, no service, no driver</td></tr>
+            <tr><th>Network</th><td>Not required — nothing is uploaded</td></tr>
+            <tr><th>Writes</th><td>None by default; carving writes only to the destination you choose</td></tr>
+          </table>
+        </div>
+        <div class="note">
+          <b>Intended use</b>
+          Built for authorized forensic examination, incident response and security testing on systems you own or have written permission to examine. Several modules read sensitive artifacts, so handle the output like any other evidence.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <div class="box">
+        <div>
+          <h2>Download</h2>
+          <p>Toolkit: one executable, 2.2 MB, no installer. Source: the full C++ project, 41 files.</p>
+        </div>
+        <div class="dl-row">
+          <a class="btn btn-main" href="WindChecker.exe" download>
+            <svg><use href="#i-download"/></svg>
+            Download toolkit
+          </a>
+          <a class="btn" href="src.zip" download>
+            <svg><use href="#i-code"/></svg>
+            Source code (.zip)
+          </a>
+        </div>
+      </div>
+
+      <p class="follow">
+        Releases and updates:
+        <a href="https://t.me/harmonyxbt" target="_blank" rel="noopener">Telegram</a> ·
+        <a href="https://www.youtube.com/@yhujinism" target="_blank" rel="noopener">YouTube</a>
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>WindChecker — Windows forensic triage.</span>
+    <nav>
+      <a href="#modules">Modules</a>
+      <a href="#screens">Screenshots</a>
+      <a href="#requirements">Requirements</a>
+    </nav>
+    <div class="social">
+      <a href="https://t.me/harmonyxbt" target="_blank" rel="noopener" aria-label="Telegram">
+        <svg><use href="#i-telegram"/></svg>
+      </a>
+      <a href="https://www.youtube.com/@yhujinism" target="_blank" rel="noopener" aria-label="YouTube">
+        <svg><use href="#i-youtube"/></svg>
+      </a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var strip = document.getElementById('shots');
+  if (!strip) return;
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-scroll]'), function (btn) {
+    btn.addEventListener('click', function () {
+      var card = strip.querySelector('.slide');
+      var step = card ? card.getBoundingClientRect().width + 14 : 600;
+      strip.scrollBy({ left: step * Number(btn.dataset.scroll), behavior: 'smooth' });
+    });
+  });
+
+  var down = false, startX = 0, startLeft = 0, moved = 0;
+
+  strip.addEventListener('mousedown', function (e) {
+    down = true;
+    moved = 0;
+    startX = e.pageX;
+    startLeft = strip.scrollLeft;
+    strip.classList.add('dragging');
+  });
+
+  window.addEventListener('mouseup', function () {
+    down = false;
+    strip.classList.remove('dragging');
+  });
+
+  window.addEventListener('mousemove', function (e) {
+    if (!down) return;
+    var dx = e.pageX - startX;
+    if (Math.abs(dx) > 3) moved = Math.abs(dx);
+    strip.scrollLeft = startLeft - dx;
+  });
+
+  strip.addEventListener('click', function (e) {
+    if (moved > 5) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+
+  strip.addEventListener('dragstart', function (e) { e.preventDefault(); });
+})();
+</script>
+
+</body>
+</html>
